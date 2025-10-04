@@ -44,13 +44,21 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
     ctx.lineTo(width, horizonY);
     ctx.stroke();
 
-    // Altitude grid lines (every 15 degrees)
+    // Altitude grid lines (every 15 degrees, up to next 15° increment above moon)
     ctx.strokeStyle = '#374151';
     ctx.lineWidth = 1;
     ctx.setLineDash([2, 2]);
     
-    for (let alt = 15; alt <= 75; alt += 15) {
-      const y = horizonY - (alt / 90) * horizonY;
+    // Calculate the maximum altitude to show (next 15° increment above moon's altitude)
+    const moonAlt = moonPosition.altitude > 0 ? moonPosition.altitude : 0;
+    const maxAltitude = Math.ceil(moonAlt / 15) * 15 + 15; // Next 15° increment + one more
+    const clampedMaxAltitude = Math.min(maxAltitude, 75); // Don't exceed 75°
+    
+    // Use the max altitude as the scale instead of fixed 90°
+    const altitudeScale = clampedMaxAltitude;
+    
+    for (let alt = 15; alt <= clampedMaxAltitude; alt += 15) {
+      const y = horizonY - (alt / altitudeScale) * horizonY;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
@@ -159,7 +167,7 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
     // Draw moon if above horizon
     if (moonPosition.altitude > 0) {
       const moonX = width / 2; // Moon is always centered horizontally
-      const moonY = horizonY - (moonPosition.altitude / 90) * horizonY;
+      const moonY = horizonY - (moonPosition.altitude / altitudeScale) * horizonY;
 
       // Moon glow
       const glowGradient = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 20);
@@ -203,10 +211,10 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
         while (relativeAzimuth > 180) relativeAzimuth -= 360;
         while (relativeAzimuth < -180) relativeAzimuth += 360;
 
-        // Only show aircraft within view range
-        if (Math.abs(relativeAzimuth) <= viewRange / 2) {
+        // Only show aircraft within view range and within altitude scale
+        if (Math.abs(relativeAzimuth) <= viewRange / 2 && flightPos.altitude <= altitudeScale) {
           const aircraftX = width / 2 + (relativeAzimuth / viewRange) * width;
-          const aircraftY = horizonY - (flightPos.altitude / 90) * horizonY;
+          const aircraftY = horizonY - (flightPos.altitude / altitudeScale) * horizonY;
 
           // Aircraft dot
           ctx.fillStyle = '#3b82f6';
