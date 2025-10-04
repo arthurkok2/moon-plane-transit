@@ -1,5 +1,26 @@
 import { Observer } from './astronomy';
 
+// OpenSky API state array format
+type OpenSkyState = [
+  string,      // icao24
+  string,      // callsign
+  string,      // origin_country
+  number,      // time_position
+  number,      // last_contact
+  number,      // longitude
+  number,      // latitude
+  number,      // baro_altitude
+  boolean,     // on_ground
+  number,      // velocity
+  number,      // true_track
+  number,      // vertical_rate
+  number[],    // sensors
+  number,      // geo_altitude
+  string,      // squawk
+  boolean,     // spi
+  number       // position_source
+];
+
 export interface FlightData {
   icao24: string;
   callsign: string | null;
@@ -48,10 +69,10 @@ export async function fetchNearbyFlights(
     }
 
     const flights: FlightData[] = data.states
-      .filter((state: any[]) => {
+      .filter((state: OpenSkyState) => {
         return state[5] !== null && state[6] !== null && state[7] !== null;
       })
-      .map((state: any[]) => ({
+      .map((state: OpenSkyState) => ({
         icao24: state[0],
         callsign: state[1] ? state[1].trim() : null,
         latitude: state[6],
