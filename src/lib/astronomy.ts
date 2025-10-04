@@ -25,19 +25,23 @@ export interface HorizontalCoordinates {
 export function calculateMoonPosition(observer: Observer, date: Date = new Date()): MoonPosition {
   const observerObj = new Astronomy.Observer(observer.latitude, observer.longitude, observer.elevation);
 
-  const moonEquatorial = Astronomy.Equator('Moon', date, observerObj, true, true);
+  const moonEquatorial = Astronomy.Equator(Astronomy.Body.Moon, date, observerObj, true, true);
   const moonHorizontal = Astronomy.Horizon(date, observerObj, moonEquatorial.ra, moonEquatorial.dec, 'normal');
 
-  const moonDistance = Astronomy.GeoVector('Moon', date, true);
-  const distanceKm = Math.sqrt(
+  const moonDistance = Astronomy.GeoVector(Astronomy.Body.Moon, date, true);
+  const distanceAU = Math.sqrt(
     moonDistance.x * moonDistance.x +
     moonDistance.y * moonDistance.y +
     moonDistance.z * moonDistance.z
   );
+  
+  // Convert distance from AU to km (1 AU = 149,597,870.7 km)
+  const distanceKm = distanceAU * 149597870.7;
 
+  // Moon's radius is 1737.4 km
   const moonAngularDiameter = (2 * Math.atan(1737.4 / distanceKm)) * (180 / Math.PI);
 
-  const illumination = Astronomy.Illumination('Moon', date);
+  const illumination = Astronomy.Illumination(Astronomy.Body.Moon, date);
 
   const phase = getMoonPhase(illumination.phase_fraction);
 
@@ -69,11 +73,8 @@ export function calculateHorizontalCoordinates(
   observer: Observer,
   latitude: number,
   longitude: number,
-  altitude: number,
-  date: Date = new Date()
+  altitude: number
 ): HorizontalCoordinates {
-  const observerObj = new Astronomy.Observer(observer.latitude, observer.longitude, observer.elevation);
-
   const dx = longitude - observer.longitude;
   const dy = latitude - observer.latitude;
   const dz = altitude - observer.elevation;
@@ -122,8 +123,8 @@ export function getMoonRiseSetTimes(observer: Observer, date: Date = new Date())
     const searchDate = new Date(date);
     searchDate.setHours(0, 0, 0, 0);
 
-    const moonrise = Astronomy.SearchRiseSet('Moon', observerObj, 1, searchDate, 1);
-    const moonset = Astronomy.SearchRiseSet('Moon', observerObj, -1, searchDate, 1);
+    const moonrise = Astronomy.SearchRiseSet(Astronomy.Body.Moon, observerObj, 1, searchDate, 1);
+    const moonset = Astronomy.SearchRiseSet(Astronomy.Body.Moon, observerObj, -1, searchDate, 1);
 
     return {
       moonrise: moonrise ? moonrise.date : null,
@@ -131,7 +132,7 @@ export function getMoonRiseSetTimes(observer: Observer, date: Date = new Date())
       alwaysUp: false,
       alwaysDown: false
     };
-  } catch (e) {
+  } catch {
     const currentMoonPos = calculateMoonPosition(observer, date);
 
     return {
