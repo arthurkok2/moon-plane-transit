@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MoonPosition } from '../lib/astronomy';
 import { FlightPosition } from '../lib/flights';
 
@@ -9,6 +9,7 @@ interface SkyMapProps {
 
 export function SkyMap({ moonPosition, flights }: SkyMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -129,13 +130,60 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
 
   return (
     <div className="bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700">
-      <h3 className="text-white text-lg font-semibold mb-3">Sky Map</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-white text-lg font-semibold">Sky Map</h3>
+        <button
+          onClick={() => setShowHelp(!showHelp)}
+          className="text-slate-400 hover:text-slate-200 text-sm px-2 py-1 rounded border border-slate-600 hover:border-slate-500 transition-colors"
+        >
+          {showHelp ? 'Hide Help' : 'How to Read'}
+        </button>
+      </div>
+
+      {showHelp && (
+        <div className="mb-4 p-3 bg-slate-700 rounded-lg text-sm text-slate-300 space-y-2">
+          <h4 className="text-slate-100 font-semibold mb-2">How to Read the Sky Map</h4>
+          
+          <div className="space-y-2">
+            <div>
+              <strong className="text-slate-200">Center:</strong> Represents the zenith (directly overhead, 90° altitude)
+            </div>
+            
+            <div>
+              <strong className="text-slate-200">Concentric Circles:</strong> Show altitude angles
+              <ul className="ml-4 mt-1 space-y-1 text-xs">
+                <li>• Outer ring: 30° above horizon</li>
+                <li>• Middle ring: 60° above horizon</li>
+                <li>• Inner ring: 90° (zenith)</li>
+              </ul>
+            </div>
+            
+            <div>
+              <strong className="text-slate-200">Compass Directions:</strong> N (North), E (East), S (South), W (West) around the edge
+            </div>
+            
+            <div>
+              <strong className="text-slate-200">Objects:</strong>
+              <ul className="ml-4 mt-1 space-y-1 text-xs">
+                <li>• <span className="text-yellow-400">Yellow circle</span>: Moon position</li>
+                <li>• <span className="text-blue-400">Blue dots</span>: Aircraft positions</li>
+              </ul>
+            </div>
+            
+            <div className="text-xs text-slate-400 pt-2 border-t border-slate-600">
+              <strong>Tip:</strong> The closer an object is to the center, the higher it appears in the sky. Objects near the edge are close to the horizon.
+            </div>
+          </div>
+        </div>
+      )}
+
       <canvas
         ref={canvasRef}
         width={400}
         height={400}
         className="w-full max-w-md mx-auto"
       />
+      
       <div className="mt-3 flex items-center justify-center gap-4 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
