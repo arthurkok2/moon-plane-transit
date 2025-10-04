@@ -151,13 +151,13 @@ function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <MoonInfo moonPosition={moonPosition} />
+            <MoonInfo moonPosition={moonPosition} observer={observer} />
             <SkyMap moonPosition={moonPosition} flights={flightPositions} />
           </div>
 
           <div className="space-y-6">
             <TransitList transits={transits} onSelectTransit={setSelectedTransit} />
-            <HorizonView moonPosition={moonPosition} flights={flightPositions} />
+            <HorizonView moonPosition={moonPosition} flights={flightPositions} observer={observer} />
             {selectedTransit && (
               <CameraAssistant transit={selectedTransit} />
             )}

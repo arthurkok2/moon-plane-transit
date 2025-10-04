@@ -1,11 +1,20 @@
-import { Moon, Compass } from 'lucide-react';
-import { MoonPosition } from '../lib/astronomy';
+import { Moon, Compass, Sunrise, Sunset } from 'lucide-react';
+import { MoonPosition, Observer, getMoonRiseSetTimes } from '../lib/astronomy';
 
 interface MoonInfoProps {
   moonPosition: MoonPosition;
+  observer: Observer | null;
 }
 
-export function MoonInfo({ moonPosition }: MoonInfoProps) {
+export function MoonInfo({ moonPosition, observer }: MoonInfoProps) {
+  // Calculate moon rise/set times
+  const riseSetTimes = observer ? getMoonRiseSetTimes(observer) : null;
+
+  const formatTime = (date: Date | null) => {
+    if (!date) return 'N/A';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700">
       <div className="flex items-center gap-3 mb-4">
@@ -53,7 +62,34 @@ export function MoonInfo({ moonPosition }: MoonInfoProps) {
         </div>
       </div>
 
+      {/* Moon Rise/Set Times */}
       <div className="mt-4 pt-4 border-t border-slate-700">
+        <div className="grid grid-cols-2 gap-4 mb-3">
+          <div>
+            <div className="text-slate-400 text-sm mb-1 flex items-center gap-1">
+              <Sunrise className="w-4 h-4" />
+              Moonrise
+            </div>
+            <div className="text-white text-lg font-medium">
+              {riseSetTimes?.alwaysUp ? 'Always up' : 
+               riseSetTimes?.alwaysDown ? 'Always down' :
+               formatTime(riseSetTimes?.moonrise || null)}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-slate-400 text-sm mb-1 flex items-center gap-1">
+              <Sunset className="w-4 h-4" />
+              Moonset
+            </div>
+            <div className="text-white text-lg font-medium">
+              {riseSetTimes?.alwaysUp ? 'Always up' : 
+               riseSetTimes?.alwaysDown ? 'Always down' :
+               formatTime(riseSetTimes?.moonset || null)}
+            </div>
+          </div>
+        </div>
+        
         <div className="text-slate-400 text-xs">
           Distance: {moonPosition.distance.toFixed(0)} km
         </div>
