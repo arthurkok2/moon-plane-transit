@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapPin, Satellite, AlertCircle, Loader2 } from 'lucide-react';
 import { MoonInfo } from './components/MoonInfo';
 import { SkyMap } from './components/SkyMap';
+import { HorizonView } from './components/HorizonView';
 import { TransitList } from './components/TransitList';
 import { CameraAssistant } from './components/CameraAssistant';
 import { useGeolocation } from './hooks/useGeolocation';
@@ -155,10 +156,11 @@ function App() {
           </div>
 
           <div className="space-y-6">
-            {selectedTransit ? (
-              <CameraAssistant transit={selectedTransit} />
-            ) : null}
             <TransitList transits={transits} onSelectTransit={setSelectedTransit} />
+            <HorizonView moonPosition={moonPosition} flights={flightPositions} />
+            {selectedTransit && (
+              <CameraAssistant transit={selectedTransit} />
+            )}
           </div>
         </div>
 
