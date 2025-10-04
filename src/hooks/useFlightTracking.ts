@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Observer } from '../lib/astronomy';
 import { FlightData, FlightPosition, fetchNearbyFlights, calculateFlightPosition } from '../lib/flights';
 
-const UPDATE_INTERVAL = 10000;
+const UPDATE_INTERVAL = 60000;
 
 export function useFlightTracking(observer: Observer | null, radiusKm: number = 50) {
   const [flights, setFlights] = useState<FlightData[]>([]);
