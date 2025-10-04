@@ -76,20 +76,20 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
       const moonY = centerY + moonRadius * Math.sin(moonAngle);
 
       const gradient = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 12);
-      gradient.addColorStop(0, '#fef3c7');
-      gradient.addColorStop(0.5, '#fde047');
-      gradient.addColorStop(1, '#facc15');
+      gradient.addColorStop(0, '#f8fafc');
+      gradient.addColorStop(0.5, '#e2e8f0');
+      gradient.addColorStop(1, '#cbd5e1');
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(moonX, moonY, 12, 0, 2 * Math.PI);
       ctx.fill();
 
-      ctx.strokeStyle = '#fbbf24';
+      ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = '#fef3c7';
+      ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('MOON', moonX, moonY - 18);
