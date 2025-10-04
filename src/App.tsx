@@ -4,6 +4,7 @@ import { MoonInfo } from './components/MoonInfo';
 import { SkyMap } from './components/SkyMap';
 import { HorizonView } from './components/HorizonView';
 import { TransitList } from './components/TransitList';
+import { FlightList } from './components/FlightList';
 import { CameraAssistant } from './components/CameraAssistant';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useMoonTracking } from './hooks/useMoonTracking';
@@ -149,18 +150,30 @@ function App() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="space-y-6">
             <MoonInfo moonPosition={moonPosition} observer={observer} />
-            <SkyMap moonPosition={moonPosition} flights={flightPositions} />
+            <SkyMap moonPosition={moonPosition} flights={flightPositions} />            
+            
           </div>
 
           <div className="space-y-6">
+            <HorizonView moonPosition={moonPosition} flights={flightPositions} />
             <TransitList transits={transits} onSelectTransit={setSelectedTransit} />
-            <HorizonView moonPosition={moonPosition} flights={flightPositions} observer={observer} />
             {selectedTransit && (
               <CameraAssistant transit={selectedTransit} />
             )}
+            <FlightList 
+              flights={flights} 
+              flightPositions={flightPositions}
+              loading={flightLoading}
+              error={flightError}
+              lastUpdate={lastUpdate}
+            />
+          </div>
+
+          <div className="space-y-6">
+
           </div>
         </div>
 
