@@ -112,6 +112,33 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
+        // Draw direction arrow
+        if (flightPos.flight.heading !== null && flightPos.flight.heading !== undefined) {
+          const headingAngle = (flightPos.flight.heading - 90) * Math.PI / 180;
+          const arrowLength = 8;
+          const arrowWidth = 3;
+          
+          // Arrow tip
+          const arrowTipX = flightX + arrowLength * Math.cos(headingAngle);
+          const arrowTipY = flightY + arrowLength * Math.sin(headingAngle);
+          
+          // Arrow base corners
+          const baseAngle1 = headingAngle + Math.PI - 0.5;
+          const baseAngle2 = headingAngle + Math.PI + 0.5;
+          const baseX1 = flightX + arrowWidth * Math.cos(baseAngle1);
+          const baseY1 = flightY + arrowWidth * Math.sin(baseAngle1);
+          const baseX2 = flightX + arrowWidth * Math.cos(baseAngle2);
+          const baseY2 = flightY + arrowWidth * Math.sin(baseAngle2);
+          
+          ctx.fillStyle = '#60a5fa';
+          ctx.beginPath();
+          ctx.moveTo(arrowTipX, arrowTipY);
+          ctx.lineTo(baseX1, baseY1);
+          ctx.lineTo(baseX2, baseY2);
+          ctx.closePath();
+          ctx.fill();
+        }
+
         if (flightPos.flight.callsign) {
           ctx.fillStyle = '#93c5fd';
           ctx.font = '9px sans-serif';

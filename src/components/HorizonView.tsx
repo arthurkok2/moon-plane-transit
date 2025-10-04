@@ -226,6 +226,45 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
           ctx.lineWidth = 1;
           ctx.stroke();
 
+          // Draw direction arrow
+          if (flightPos.flight.heading !== null && flightPos.flight.heading !== undefined) {
+            // In horizon view, we need to project the 3D heading onto the 2D view
+            // Convert the aircraft's true heading relative to the view direction
+            let relativeHeading = flightPos.flight.heading - moonAzimuth;
+            
+            // Normalize to [-180, 180]
+            while (relativeHeading > 180) relativeHeading -= 360;
+            while (relativeHeading < -180) relativeHeading += 360;
+            
+            // For horizon view, we'll show horizontal movement direction
+            // Positive relative heading = moving right, negative = moving left
+            const arrowLength = 6;
+            const arrowWidth = 2.5;
+            
+            // Determine if aircraft is moving significantly left or right
+            if (Math.abs(relativeHeading) > 15) { // Only show arrow if significant horizontal movement
+              const direction = relativeHeading > 0 ? 1 : -1; // Right or left
+              
+              // Arrow tip (horizontal direction)
+              const arrowTipX = aircraftX + direction * arrowLength;
+              const arrowTipY = aircraftY;
+              
+              // Arrow base corners
+              const baseX1 = aircraftX - direction * arrowWidth;
+              const baseY1 = aircraftY - arrowWidth;
+              const baseX2 = aircraftX - direction * arrowWidth;
+              const baseY2 = aircraftY + arrowWidth;
+              
+              ctx.fillStyle = '#60a5fa';
+              ctx.beginPath();
+              ctx.moveTo(arrowTipX, arrowTipY);
+              ctx.lineTo(baseX1, baseY1);
+              ctx.lineTo(baseX2, baseY2);
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+
           // Aircraft callsign and altitude
           if (flightPos.flight.callsign) {
             ctx.fillStyle = '#93c5fd';
