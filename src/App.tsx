@@ -16,6 +16,68 @@ import { useDataSource } from './hooks/useDataSource';
 import { TransitDetector, TransitPrediction } from './lib/transitDetector';
 import { DATA_SOURCES } from './lib/flights';
 
+// Generate a mock flight that will cross the current celestial body
+import { Observer } from './lib/astronomy';
+import { MoonPosition, SunPosition } from './lib/astronomy';
+import { calculateFlightPosition } from './lib/flights';
+
+function generateMockFlight(
+  observer: Observer | null,
+  bodyMode: 'moon' | 'sun',
+  moonPosition: MoonPosition | null,
+  sunPosition: SunPosition | null
+) {
+  const pos = bodyMode === 'moon' ? moonPosition : sunPosition;
+  if (!observer || !pos) return { data: [], positions: [] };
+  // Desired distance from observer (km): fixed at 50 km
+  const velocityMps = 100; // 100 m/s (~200 kt)
+  const secondsBeforeCrossing = 15; // 15 seconds before crossing
+  const distanceKm = 20; // 20 km away
+  // Calculate azimuth offset: angle the flight travels in 15s at velocity
+  // angle = atan((velocity * seconds) / (distanceKm * 1000)) in radians
+  const angleRad = Math.atan((velocityMps * secondsBeforeCrossing) / (distanceKm * 1000));
+  const angleDeg = angleRad * 180 / Math.PI;
+  const mockAzimuth = (pos.azimuth - angleDeg + 360) % 360;
+  // Heading perpendicular to body's azimuth for crossing
+  const heading = (pos.azimuth + 90) % 360;
+  const callsign = bodyMode === 'moon' ? 'MOONXING' : 'SUNXING';
+  const icao24 = bodyMode === 'moon' ? 'MOONXING' : 'SUNXING';
+
+  // Project mock flight's lat/lon from observer at adjusted azimuth and distance
+  const azimuthRad = mockAzimuth * Math.PI / 180;
+  const earthRadiusKm = 6371;
+  const lat1 = observer.latitude * Math.PI / 180;
+  const lon1 = observer.longitude * Math.PI / 180;
+  const dByR = distanceKm / earthRadiusKm;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(azimuthRad));
+  const lon2 = lon1 + Math.atan2(
+    Math.sin(azimuthRad) * Math.sin(dByR) * Math.cos(lat1),
+    Math.cos(dByR) - Math.sin(lat1) * Math.sin(lat2)
+  );
+  const offsetLat = lat2 * 180 / Math.PI;
+  const offsetLon = lon2 * 180 / Math.PI;
+
+  // Calculate altitude so that, from observer, the flight appears at the body's altitude above horizon
+  // altitude = observer.elevation + tan(body_altitude) * (distanceKm * 1000)
+  const bodyAltRad = pos.altitude * Math.PI / 180;
+  const flightAlt = observer.elevation + Math.tan(bodyAltRad) * (distanceKm * 1000);
+
+  const flightData = {
+    icao24,
+    callsign,
+    latitude: offsetLat,
+    longitude: offsetLon,
+    altitude: flightAlt,
+    velocity: velocityMps,
+    heading,
+    verticalRate: 0,
+    lastUpdate: Date.now(),
+  };
+  // Use calculateFlightPosition to get the mock flight's position
+  const flightPosition = calculateFlightPosition(observer, flightData);
+  return { data: [flightData], positions: [flightPosition] };
+}
+
 function App() {
   const { observer, error: locationError, loading: locationLoading } = useGeolocation();
   const moonPosition = useMoonTracking(observer);
@@ -26,21 +88,27 @@ function App() {
   useEffect(() => { try { localStorage.setItem('transitBodyMode', bodyMode); } catch { /* ignore persistence errors */ } }, [bodyMode]);
   const { dataSource, setDataSource } = useDataSource();
   const { flights, flightPositions, error: flightError, loading: flightLoading, lastUpdate } = useFlightTracking(observer, 50, dataSource);
+  const [mockMode, setMockMode] = useState(false);
 
   const [transits, setTransits] = useState<TransitPrediction[]>([]);
   const [selectedTransit, setSelectedTransit] = useState<TransitPrediction | null>(null);
   const [detector] = useState(() => new TransitDetector());
 
+  // Use mock flights if mockMode is enabled
+  const mock = generateMockFlight(observer, bodyMode, moonPosition, sunPosition);
+  const activeFlights = mockMode ? mock.data : flights;
+  const activeFlightPositions = mockMode ? mock.positions : flightPositions;
+
   useEffect(() => {
-    if (!observer || flights.length === 0) { setTransits([]); return; }
+    if (!observer || activeFlights.length === 0) { setTransits([]); return; }
     if (bodyMode === 'moon') {
-      if (moonPosition) setTransits(detector.detectMoonTransits(observer, flights, moonPosition));
+      if (moonPosition) setTransits(detector.detectMoonTransits(observer, activeFlights, moonPosition));
       else setTransits([]);
     } else {
-      if (sunPosition) setTransits(detector.detectSunTransits(observer, flights, sunPosition));
+      if (sunPosition) setTransits(detector.detectSunTransits(observer, activeFlights, sunPosition));
       else setTransits([]);
     }
-  }, [observer, flights, bodyMode, moonPosition, sunPosition, detector]);
+  }, [observer, activeFlights, bodyMode, moonPosition, sunPosition, detector, mockMode]);
 
   useEffect(() => {
     if (!selectedTransit || selectedTransit.bodyName.toLowerCase() !== bodyMode) {
@@ -113,9 +181,17 @@ function App() {
               </button>
             ))}
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Mock Flights</span>
+            <button
+              onClick={() => setMockMode(m => !m)}
+              aria-pressed={mockMode}
+              className={`px-3 py-1 rounded text-sm border transition-colors ${mockMode ? 'bg-emerald-600 border-emerald-500 text-white' : 'border-slate-600 text-slate-300 hover:border-slate-500'}`}
+            >{mockMode ? 'On' : 'Off'}</button>
+          </div>
         </div>
         {/* Data Source Selector Row */}
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap gap-4 items-center">
           <DataSourceSelector 
             selectedSource={dataSource}
             onSourceChange={setDataSource}
@@ -141,7 +217,7 @@ function App() {
               <h3 className="text-white font-semibold">Flight Tracking</h3>
             </div>
             <div className="text-slate-300 text-sm">
-              <div>Aircraft tracked: {flights.length}</div>
+              <div>Aircraft tracked: {mockMode ? activeFlights.length : flights.length}</div>
               <div className="flex items-center gap-2">
                 {flightLoading && <Loader2 className="w-3 h-3 animate-spin" />}
                 <span>
@@ -209,10 +285,10 @@ function App() {
           <div className="space-y-6">
             {bodyMode==='moon' && moonPosition && <MoonInfo moonPosition={moonPosition} observer={observer} />}
             {bodyMode==='sun' && sunPosition && <SunInfo sunPosition={sunPosition} observer={observer} />}
-            {(bodyMode==='moon' && moonPosition) && <HorizonView bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
-            {(bodyMode==='sun' && sunPosition) && <HorizonView bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}
-            {(bodyMode==='moon' && moonPosition) && <SkyMap bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
-            {(bodyMode==='sun' && sunPosition) && <SkyMap bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}            
+            {(bodyMode==='moon' && moonPosition) && <HorizonView bodyPosition={moonPosition} bodyName='Moon' flights={activeFlightPositions} />}
+            {(bodyMode==='sun' && sunPosition) && <HorizonView bodyPosition={sunPosition} bodyName='Sun' flights={activeFlightPositions} />}
+            {(bodyMode==='moon' && moonPosition) && <SkyMap bodyPosition={moonPosition} bodyName='Moon' flights={activeFlightPositions} />}
+            {(bodyMode==='sun' && sunPosition) && <SkyMap bodyPosition={sunPosition} bodyName='Sun' flights={activeFlightPositions} />}            
           </div>
 
           <div className="space-y-6">
@@ -227,11 +303,11 @@ function App() {
               <CameraAssistant transit={selectedTransit} />
             )}
             <FlightList 
-              flights={flights} 
-              flightPositions={flightPositions}
-              loading={flightLoading}
-              error={flightError}
-              lastUpdate={lastUpdate}
+              flights={activeFlights} 
+              flightPositions={activeFlightPositions}
+              loading={mockMode ? false : flightLoading}
+              error={mockMode ? null : flightError}
+              lastUpdate={mockMode ? new Date() : lastUpdate}
               dataSource={dataSource}
             />
           </div>
