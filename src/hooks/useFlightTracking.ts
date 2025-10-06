@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Observer } from '../lib/astronomy';
 import { FlightData, FlightPosition, fetchNearbyFlights, calculateFlightPosition } from '../lib/flights';
 
@@ -10,9 +10,36 @@ export function useFlightTracking(observer: Observer | null, radiusKm: number = 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const lastObserverRef = useRef<Observer | null>(null);
 
   useEffect(() => {
-    if (!observer) return;
+    if (!observer) {
+      // Clear interval if observer becomes null
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+
+    // Check if observer has changed significantly (avoid unnecessary re-fetches for tiny changes)
+    const hasObserverChanged = !lastObserverRef.current ||
+      Math.abs(lastObserverRef.current.latitude - observer.latitude) > 0.001 ||
+      Math.abs(lastObserverRef.current.longitude - observer.longitude) > 0.001 ||
+      Math.abs(lastObserverRef.current.elevation - observer.elevation) > 100;
+
+    if (!hasObserverChanged && intervalRef.current) {
+      // Observer hasn't changed significantly and we already have an interval running
+      return;
+    }
+
+    // Clear existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    lastObserverRef.current = observer;
 
     const fetchFlights = async () => {
       setLoading(true);
@@ -35,10 +62,18 @@ export function useFlightTracking(observer: Observer | null, radiusKm: number = 
       }
     };
 
+    // Fetch immediately for new observer
     fetchFlights();
-    const interval = setInterval(fetchFlights, UPDATE_INTERVAL);
+    
+    // Set up interval for regular updates
+    intervalRef.current = setInterval(fetchFlights, UPDATE_INTERVAL);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [observer, radiusKm]);
 
   return { flights, flightPositions, error, loading, lastUpdate };
