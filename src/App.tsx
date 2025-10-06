@@ -12,6 +12,7 @@ import { useMoonTracking } from './hooks/useMoonTracking';
 import { useFlightTracking } from './hooks/useFlightTracking';
 import { useDataSource } from './hooks/useDataSource';
 import { TransitDetector, TransitPrediction } from './lib/transitDetector';
+import { DATA_SOURCES } from './lib/flights';
 
 function App() {
   const { observer, error: locationError, loading: locationLoading } = useGeolocation();
@@ -187,7 +188,13 @@ function App() {
         </div>
 
         <footer className="mt-12 pt-8 border-t border-slate-700 text-center text-slate-400 text-sm">
-          <p>Flight data provided by OpenSky Network. Astronomical calculations powered by Astronomy Engine.</p>
+          <p>
+            Flight data currently provided by <span className="text-slate-300 font-medium">{DATA_SOURCES[dataSource].name}</span>.
+            Astronomical calculations powered by <span className="text-slate-300 font-medium">Astronomy Engine</span>.
+          </p>
+          <p className="mt-2">
+            Available data sources: <span className="text-slate-300">OpenSky Network</span> • <span className="text-slate-300">ADSB.One</span>
+          </p>
           <p className="mt-2">For best results, use a telephoto lens and start shooting before the predicted transit time.</p>
         </footer>
       </div>

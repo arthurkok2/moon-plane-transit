@@ -155,13 +155,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- **OpenSky Network**: For providing free aircraft tracking data
-- **Astronomy Engine**: For precise astronomical calculations
+- **[OpenSky Network](https://opensky-network.org/)**: For providing free, community-driven aircraft tracking data
+- **[ADSB.One](https://adsb.one/)**: For providing high-quality ADS-B data with excellent coverage  
+- **[Astronomy Engine](https://github.com/cosinekitty/astronomy)**: For precise astronomical calculations
 - **React Community**: For the excellent ecosystem and tools
 
 ## Data Sources
 
-- **Flight Data**: [OpenSky Network](https://opensky-network.org/)
+- **Flight Data**: [OpenSky Network](https://opensky-network.org/) • [ADSB.One](https://adsb.one/)
 - **Astronomical Calculations**: [Astronomy Engine](https://github.com/cosinekitty/astronomy)
 
 ---
