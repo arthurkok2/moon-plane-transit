@@ -193,7 +193,7 @@ function App() {
             Astronomical calculations powered by <span className="text-slate-300 font-medium">Astronomy Engine</span>.
           </p>
           <p className="mt-2">
-            Available data sources: <span className="text-slate-300">OpenSky Network</span> • <span className="text-slate-300">ADSB.One</span>
+            Available data sources: <span className="text-slate-300">ADSB.One</span> • <span className="text-slate-300">OpenSky Network</span>
           </p>
           <p className="mt-2">For best results, use a telephoto lens and start shooting before the predicted transit time.</p>
         </footer>
