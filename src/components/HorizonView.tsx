@@ -236,26 +236,60 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
             while (relativeHeading > 180) relativeHeading -= 360;
             while (relativeHeading < -180) relativeHeading += 360;
             
-            // For horizon view, we'll show horizontal movement direction
-            // Positive relative heading = moving right, negative = moving left
-            const arrowLength = 6;
-            const arrowWidth = 2.5;
+            // Calculate movement vector including vertical rate
+            const arrowLength = 10;
+            const arrowWidth = 6;
             
-            // Determine if aircraft is moving significantly left or right
-            if (Math.abs(relativeHeading) > 15) { // Only show arrow if significant horizontal movement
-              const direction = relativeHeading > 0 ? 1 : -1; // Right or left
+            // Horizontal movement component
+            const horizontalMovement = Math.abs(relativeHeading) > 15;
+            const horizontalDirection = relativeHeading > 0 ? 1 : -1;
+            
+            // Vertical movement component (verticalRate in m/s, positive = climbing)
+            const verticalRate = flightPos.flight.verticalRate || 0;
+            const significantVerticalMovement = Math.abs(verticalRate) > 2; // 2 m/s threshold
+            
+            // Show arrow if there's significant horizontal or vertical movement
+            if (horizontalMovement || significantVerticalMovement) {
+              // Calculate arrow direction vector
+              let deltaX = horizontalMovement ? horizontalDirection * arrowLength : 0;
+              let deltaY = 0;
               
-              // Arrow tip (horizontal direction)
-              const arrowTipX = aircraftX + direction * arrowLength;
-              const arrowTipY = aircraftY;
+              // Add vertical component (negative Y is up on canvas)
+              if (significantVerticalMovement) {
+                // Scale vertical rate to reasonable arrow length
+                const verticalComponent = Math.sign(verticalRate) * Math.min(Math.abs(verticalRate) / 5, arrowLength * 0.8);
+                deltaY = -verticalComponent; // Negative because canvas Y increases downward
+              }
               
-              // Arrow base corners
-              const baseX1 = aircraftX - direction * arrowWidth;
-              const baseY1 = aircraftY - arrowWidth;
-              const baseX2 = aircraftX - direction * arrowWidth;
-              const baseY2 = aircraftY + arrowWidth;
+              // Ensure minimum arrow length
+              const arrowMagnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+              if (arrowMagnitude > 0 && arrowMagnitude < arrowLength * 0.5) {
+                const scale = (arrowLength * 0.5) / arrowMagnitude;
+                deltaX *= scale;
+                deltaY *= scale;
+              }
               
-              ctx.fillStyle = '#60a5fa';
+              // Arrow tip
+              const arrowTipX = aircraftX + deltaX;
+              const arrowTipY = aircraftY + deltaY;
+              
+              // Calculate perpendicular vector for arrow base
+              const arrowAngle = Math.atan2(deltaY, deltaX);
+              const perpAngle1 = arrowAngle + Math.PI * 0.75;
+              const perpAngle2 = arrowAngle - Math.PI * 0.75;
+              
+              const baseX1 = arrowTipX + arrowWidth * Math.cos(perpAngle1);
+              const baseY1 = arrowTipY + arrowWidth * Math.sin(perpAngle1);
+              const baseX2 = arrowTipX + arrowWidth * Math.cos(perpAngle2);
+              const baseY2 = arrowTipY + arrowWidth * Math.sin(perpAngle2);
+              
+              // Color based on vertical movement
+              if (significantVerticalMovement) {
+                ctx.fillStyle = verticalRate > 0 ? '#10b981' : '#ef4444'; // Green for climb, red for descent
+              } else {
+                ctx.fillStyle = '#22c55e'; // Default green for horizontal only
+              }
+              
               ctx.beginPath();
               ctx.moveTo(arrowTipX, arrowTipY);
               ctx.lineTo(baseX1, baseY1);

@@ -115,8 +115,8 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
         // Draw direction arrow
         if (flightPos.flight.heading !== null && flightPos.flight.heading !== undefined) {
           const headingAngle = (flightPos.flight.heading - 90) * Math.PI / 180;
-          const arrowLength = 8;
-          const arrowWidth = 3;
+          const arrowLength = 13;
+          const arrowWidth = 6;
           
           // Arrow tip
           const arrowTipX = flightX + arrowLength * Math.cos(headingAngle);
@@ -130,7 +130,8 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
           const baseX2 = flightX + arrowWidth * Math.cos(baseAngle2);
           const baseY2 = flightY + arrowWidth * Math.sin(baseAngle2);
           
-          ctx.fillStyle = '#60a5fa';
+          // Fill with green color
+          ctx.fillStyle = '#22c55e'; // Green color
           ctx.beginPath();
           ctx.moveTo(arrowTipX, arrowTipY);
           ctx.lineTo(baseX1, baseY1);
