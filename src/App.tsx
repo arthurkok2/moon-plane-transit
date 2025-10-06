@@ -15,68 +15,7 @@ import { useFlightTracking } from './hooks/useFlightTracking';
 import { useDataSource } from './hooks/useDataSource';
 import { TransitDetector, TransitPrediction } from './lib/transitDetector';
 import { DATA_SOURCES } from './lib/flights';
-
-// Generate a mock flight that will cross the current celestial body
-import { Observer } from './lib/astronomy';
-import { MoonPosition, SunPosition } from './lib/astronomy';
-import { calculateFlightPosition } from './lib/flights';
-
-function generateMockFlight(
-  observer: Observer | null,
-  bodyMode: 'moon' | 'sun',
-  moonPosition: MoonPosition | null,
-  sunPosition: SunPosition | null
-) {
-  const pos = bodyMode === 'moon' ? moonPosition : sunPosition;
-  if (!observer || !pos) return { data: [], positions: [] };
-  // Desired distance from observer (km): fixed at 50 km
-  const velocityMps = 100; // 100 m/s (~200 kt)
-  const secondsBeforeCrossing = 15; // 15 seconds before crossing
-  const distanceKm = 20; // 20 km away
-  // Calculate azimuth offset: angle the flight travels in 15s at velocity
-  // angle = atan((velocity * seconds) / (distanceKm * 1000)) in radians
-  const angleRad = Math.atan((velocityMps * secondsBeforeCrossing) / (distanceKm * 1000));
-  const angleDeg = angleRad * 180 / Math.PI;
-  const mockAzimuth = (pos.azimuth - angleDeg + 360) % 360;
-  // Heading perpendicular to body's azimuth for crossing
-  const heading = (pos.azimuth + 90) % 360;
-  const callsign = bodyMode === 'moon' ? 'MOONXING' : 'SUNXING';
-  const icao24 = bodyMode === 'moon' ? 'MOONXING' : 'SUNXING';
-
-  // Project mock flight's lat/lon from observer at adjusted azimuth and distance
-  const azimuthRad = mockAzimuth * Math.PI / 180;
-  const earthRadiusKm = 6371;
-  const lat1 = observer.latitude * Math.PI / 180;
-  const lon1 = observer.longitude * Math.PI / 180;
-  const dByR = distanceKm / earthRadiusKm;
-  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dByR) + Math.cos(lat1) * Math.sin(dByR) * Math.cos(azimuthRad));
-  const lon2 = lon1 + Math.atan2(
-    Math.sin(azimuthRad) * Math.sin(dByR) * Math.cos(lat1),
-    Math.cos(dByR) - Math.sin(lat1) * Math.sin(lat2)
-  );
-  const offsetLat = lat2 * 180 / Math.PI;
-  const offsetLon = lon2 * 180 / Math.PI;
-
-  // Calculate altitude so that, from observer, the flight appears at the body's altitude above horizon
-  // altitude = observer.elevation + tan(body_altitude) * (distanceKm * 1000)
-  const bodyAltRad = pos.altitude * Math.PI / 180;
-  const flightAlt = observer.elevation + Math.tan(bodyAltRad) * (distanceKm * 1000);
-
-  const flightData = {
-    icao24,
-    callsign,
-    latitude: offsetLat,
-    longitude: offsetLon,
-    altitude: flightAlt,
-    velocity: velocityMps,
-    heading,
-    verticalRate: 0,
-    lastUpdate: Date.now(),
-  };
-  // Use calculateFlightPosition to get the mock flight's position
-  const flightPosition = calculateFlightPosition(observer, flightData);
-  return { data: [flightData], positions: [flightPosition] };
-}
+import useMockFlight from './hooks/useMockFlight';
 
 function App() {
   const { observer, error: locationError, loading: locationLoading } = useGeolocation();
@@ -94,8 +33,8 @@ function App() {
   const [selectedTransit, setSelectedTransit] = useState<TransitPrediction | null>(null);
   const [detector] = useState(() => new TransitDetector());
 
-  // Use mock flights if mockMode is enabled
-  const mock = generateMockFlight(observer, bodyMode, moonPosition, sunPosition);
+  // Use mock flights if mockMode is enabled (moved to hook)
+  const mock = useMockFlight(observer, bodyMode, moonPosition, sunPosition, mockMode);
   const activeFlights = mockMode ? mock.data : flights;
   const activeFlightPositions = mockMode ? mock.positions : flightPositions;
 
