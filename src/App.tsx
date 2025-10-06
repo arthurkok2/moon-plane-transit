@@ -88,7 +88,14 @@ function App() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+        <div className="mb-6">
+          <DataSourceSelector 
+            selectedSource={dataSource}
+            onSourceChange={setDataSource}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="w-5 h-5 text-green-400" />
@@ -100,11 +107,6 @@ function App() {
               <div>Alt: {observer.elevation.toFixed(0)}m</div>
             </div>
           </div>
-
-          <DataSourceSelector 
-            selectedSource={dataSource}
-            onSourceChange={setDataSource}
-          />
 
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">

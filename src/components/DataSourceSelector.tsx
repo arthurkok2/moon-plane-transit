@@ -1,4 +1,4 @@
-import { Satellite, Radio, Info } from 'lucide-react';
+import { Satellite, Radio } from 'lucide-react';
 import { ADSBDataSource, DATA_SOURCES, DataSourceInfo } from '../lib/flights';
 
 interface DataSourceSelectorProps {
@@ -14,13 +14,13 @@ export function DataSourceSelector({ selectedSource, onSourceChange }: DataSourc
   ];
 
   return (
-    <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
+      <div className="flex items-center gap-2 mb-6">
         <Radio className="w-5 h-5 text-purple-400" />
-        <h3 className="text-white font-semibold">ADS-B Data Source</h3>
+        <h3 className="text-white font-semibold text-lg">ADS-B Data Source</h3>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sources.map((source) => (
           <SourceOption
             key={source.id}
@@ -29,26 +29,6 @@ export function DataSourceSelector({ selectedSource, onSourceChange }: DataSourc
             onSelect={() => onSourceChange(source.id)}
           />
         ))}
-      </div>
-
-      <div className="mt-4 pt-3 border-t border-slate-600">
-        <div className="flex items-start gap-2 text-xs text-slate-400">
-          <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="mb-1">
-              <strong className="text-slate-300">Current:</strong> {DATA_SOURCES[selectedSource].name}
-            </p>
-            <p className="mb-1">
-              <strong className="text-slate-300">Rate Limit:</strong> {DATA_SOURCES[selectedSource].rateLimit}
-            </p>
-            <p className="mb-1">
-              <strong className="text-slate-300">Update Frequency:</strong> {DATA_SOURCES[selectedSource].updateInterval / 1000}s
-            </p>
-            <p>
-              <strong className="text-slate-300">Max Radius:</strong> {DATA_SOURCES[selectedSource].maxRadius}km
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

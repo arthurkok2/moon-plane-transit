@@ -6,7 +6,7 @@ A real-time web application that tracks when aircraft will pass in front of the 
 
 ### 🎯 **Real-Time Tracking**
 - Live aircraft position tracking with multiple ADS-B data sources
-- Support for ADSB.One (10s updates) and OpenSky Network (60s updates)
+- Support for ADSB.One (5s updates) and OpenSky Network (60s updates)
 - Precise moon position calculations based on your location
 - Real-time transit predictions and updates
 
@@ -72,10 +72,10 @@ The app supports multiple ADS-B data sources that you can select from:
 
 ### ADSB.One (Default)
 - **Rate Limit**: 1 request per second
-- **Update Frequency**: 10 seconds
+- **Update Frequency**: 5 seconds
 - **Coverage**: High-quality data with excellent coverage
 - **Max Radius**: 463km (250 nautical miles)
-- **Best For**: Real-time tracking with faster updates
+- **Best For**: Real-time tracking with ultra-fast updates
 
 ### OpenSky Network
 - **Rate Limit**: 400 requests/day (anonymous users)
@@ -84,7 +84,7 @@ The app supports multiple ADS-B data sources that you can select from:
 - **Max Radius**: 250km
 - **Best For**: General use, no registration required
 
-The data source can be changed in the app interface, and your preference is saved locally.
+The data source can be changed in the app interface, and your preference is saved locally. The data source selector is prominently displayed at the top of the application for easy access.
 
 ### Project Structure
 

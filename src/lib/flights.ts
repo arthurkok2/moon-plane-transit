@@ -22,7 +22,7 @@ export const DATA_SOURCES: Record<ADSBDataSource, DataSourceInfo> = {
     description: 'High-quality ADS-B data with excellent coverage',
     rateLimit: '1 request/second',
     maxRadius: 463, // 250 nautical miles
-    updateInterval: 10000 // 10 seconds
+    updateInterval: 5000 // 5 seconds
   },
   [ADSBDataSource.OPENSKY]: {
     id: ADSBDataSource.OPENSKY,
