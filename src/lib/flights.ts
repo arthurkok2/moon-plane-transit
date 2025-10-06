@@ -42,6 +42,9 @@ export interface FlightPosition {
 
 const OPENSKY_BASE_URL = 'https://opensky-network.org/api/states/all';
 
+// Minimum airborne speed in m/s (approximately 100 knots)
+const MIN_AIRBORNE_SPEED = 51.4; // m/s
+
 export async function fetchNearbyFlights(
   observer: Observer,
   radiusKm: number = 50
@@ -70,7 +73,8 @@ export async function fetchNearbyFlights(
 
     const flights: FlightData[] = data.states
       .filter((state: OpenSkyState) => {
-        return state[5] !== null && state[6] !== null && state[7] !== null;
+        return state[5] !== null && state[6] !== null && state[7] !== null && 
+               state[9] !== null && state[9] >= MIN_AIRBORNE_SPEED;
       })
       .map((state: OpenSkyState) => ({
         icao24: state[0],
