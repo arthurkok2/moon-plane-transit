@@ -209,14 +209,13 @@ function App() {
           <div className="space-y-6">
             {bodyMode==='moon' && moonPosition && <MoonInfo moonPosition={moonPosition} observer={observer} />}
             {bodyMode==='sun' && sunPosition && <SunInfo sunPosition={sunPosition} observer={observer} />}
+            {(bodyMode==='moon' && moonPosition) && <HorizonView bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
+            {(bodyMode==='sun' && sunPosition) && <HorizonView bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}
             {(bodyMode==='moon' && moonPosition) && <SkyMap bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
             {(bodyMode==='sun' && sunPosition) && <SkyMap bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}            
-            
           </div>
 
           <div className="space-y-6">
-            {(bodyMode==='moon' && moonPosition) && <HorizonView bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
-            {(bodyMode==='sun' && sunPosition) && <HorizonView bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}
             <TransitList 
               transits={transits} 
               onSelectTransit={setSelectedTransit} 
