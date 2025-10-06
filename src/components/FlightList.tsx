@@ -1,5 +1,5 @@
-import { Plane, Navigation, TrendingUp, Clock, MapPin, Gauge } from 'lucide-react';
-import { FlightData, FlightPosition } from '../lib/flights';
+import { Plane, Navigation, TrendingUp, Clock, MapPin, Gauge, Radio } from 'lucide-react';
+import { FlightData, FlightPosition, ADSBDataSource, DATA_SOURCES } from '../lib/flights';
 
 interface FlightListProps {
   flights: FlightData[];
@@ -7,9 +7,10 @@ interface FlightListProps {
   loading: boolean;
   error: string | null;
   lastUpdate: Date | null;
+  dataSource: ADSBDataSource;
 }
 
-export function FlightList({ flights, flightPositions, loading, error, lastUpdate }: FlightListProps) {
+export function FlightList({ flights, flightPositions, loading, error, lastUpdate, dataSource }: FlightListProps) {
   const sortedFlights = [...flights].sort((a, b) => {
     const posA = flightPositions.find(pos => pos.flight.icao24 === a.icao24);
     const posB = flightPositions.find(pos => pos.flight.icao24 === b.icao24);
@@ -194,11 +195,18 @@ export function FlightList({ flights, flightPositions, loading, error, lastUpdat
         </div>
       )}
 
-      {flights.length > 5 && (
+      {flights.length > 0 && (
         <div className="mt-4 pt-3 border-t border-slate-600/50">
-          <p className="text-xs text-slate-400 text-center">
-            Showing closest flights first • Total: {flights.length} aircraft tracked
-          </p>
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <div className="flex items-center gap-1">
+              <Radio className="w-3 h-3" />
+              <span>Source: {DATA_SOURCES[dataSource].name}</span>
+            </div>
+            <span>
+              {flights.length > 5 ? 'Showing closest flights first • ' : ''}
+              Total: {flights.length} aircraft tracked
+            </span>
+          </div>
         </div>
       )}
     </div>

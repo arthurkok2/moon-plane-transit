@@ -6,15 +6,18 @@ import { HorizonView } from './components/HorizonView';
 import { TransitList } from './components/TransitList';
 import { FlightList } from './components/FlightList';
 import { CameraAssistant } from './components/CameraAssistant';
+import { DataSourceSelector } from './components/DataSourceSelector';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useMoonTracking } from './hooks/useMoonTracking';
 import { useFlightTracking } from './hooks/useFlightTracking';
+import { useDataSource } from './hooks/useDataSource';
 import { TransitDetector, TransitPrediction } from './lib/transitDetector';
 
 function App() {
   const { observer, error: locationError, loading: locationLoading } = useGeolocation();
   const moonPosition = useMoonTracking(observer);
-  const { flights, flightPositions, error: flightError, loading: flightLoading, lastUpdate } = useFlightTracking(observer);
+  const { dataSource, setDataSource } = useDataSource();
+  const { flights, flightPositions, error: flightError, loading: flightLoading, lastUpdate } = useFlightTracking(observer, 50, dataSource);
 
   const [transits, setTransits] = useState<TransitPrediction[]>([]);
   const [selectedTransit, setSelectedTransit] = useState<TransitPrediction | null>(null);
@@ -84,7 +87,7 @@ function App() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               <MapPin className="w-5 h-5 text-green-400" />
@@ -96,6 +99,11 @@ function App() {
               <div>Alt: {observer.elevation.toFixed(0)}m</div>
             </div>
           </div>
+
+          <DataSourceSelector 
+            selectedSource={dataSource}
+            onSourceChange={setDataSource}
+          />
 
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
@@ -169,6 +177,7 @@ function App() {
               loading={flightLoading}
               error={flightError}
               lastUpdate={lastUpdate}
+              dataSource={dataSource}
             />
           </div>
 

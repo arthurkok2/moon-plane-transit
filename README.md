@@ -5,7 +5,8 @@ A real-time web application that tracks when aircraft will pass in front of the 
 ## Features
 
 ### 🎯 **Real-Time Tracking**
-- Live aircraft position tracking using OpenSky Network data
+- Live aircraft position tracking with multiple ADS-B data sources
+- Support for OpenSky Network (60s updates) and ADSB.One (10s updates)
 - Precise moon position calculations based on your location
 - Real-time transit predictions and updates
 
@@ -65,17 +66,40 @@ npm run build
 npm test
 ```
 
+## ADS-B Data Sources
+
+The app supports multiple ADS-B data sources that you can select from:
+
+### OpenSky Network (Default)
+- **Rate Limit**: 400 requests/day (anonymous users)
+- **Update Frequency**: 60 seconds
+- **Coverage**: Global, community-driven network
+- **Max Radius**: 250km
+- **Best For**: General use, no registration required
+
+### ADSB.One
+- **Rate Limit**: 1 request per second
+- **Update Frequency**: 10 seconds
+- **Coverage**: High-quality data with excellent coverage
+- **Max Radius**: 463km (250 nautical miles)
+- **Best For**: Real-time tracking with faster updates
+
+The data source can be changed in the app interface, and your preference is saved locally.
+
 ### Project Structure
 
 ```
 src/
 ├── components/          # React components
 │   ├── CameraAssistant.tsx    # Photography guidance
+│   ├── DataSourceSelector.tsx # ADS-B source selection
+│   ├── FlightList.tsx         # Aircraft list with details
 │   ├── HorizonView.tsx        # Side view with compass
 │   ├── MoonInfo.tsx           # Moon phase and position
 │   ├── SkyMap.tsx             # Overhead sky visualization
 │   └── TransitList.tsx        # Predicted transits list
 ├── hooks/               # Custom React hooks
+│   ├── useDataSource.ts       # ADS-B source management
 │   ├── useFlightTracking.ts   # Aircraft data management
 │   ├── useGeolocation.ts      # Location services
 │   ├── useLocalStorage.ts     # Browser storage

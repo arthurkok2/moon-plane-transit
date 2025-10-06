@@ -1,5 +1,39 @@
 import { Observer } from './astronomy';
 
+// Data source types
+export enum ADSBDataSource {
+  OPENSKY = 'opensky',
+  ADSB_ONE = 'adsb-one'
+}
+
+export interface DataSourceInfo {
+  id: ADSBDataSource;
+  name: string;
+  description: string;
+  rateLimit: string;
+  maxRadius: number; // in km
+  updateInterval: number; // in milliseconds
+}
+
+export const DATA_SOURCES: Record<ADSBDataSource, DataSourceInfo> = {
+  [ADSBDataSource.OPENSKY]: {
+    id: ADSBDataSource.OPENSKY,
+    name: 'OpenSky Network',
+    description: 'Free, community-driven ADS-B network',
+    rateLimit: '400 requests/day (anonymous)',
+    maxRadius: 250,
+    updateInterval: 60000 // 60 seconds
+  },
+  [ADSBDataSource.ADSB_ONE]: {
+    id: ADSBDataSource.ADSB_ONE,
+    name: 'ADSB.One',
+    description: 'High-quality ADS-B data with good coverage',
+    rateLimit: '1 request/second',
+    maxRadius: 463, // 250 nautical miles
+    updateInterval: 10000 // 10 seconds
+  }
+};
+
 // OpenSky API state array format
 type OpenSkyState = [
   string,      // icao24
@@ -20,6 +54,30 @@ type OpenSkyState = [
   boolean,     // spi
   number       // position_source
 ];
+
+// ADSB.One API response format (ADSBExchange v2 compatible)
+interface ADSBOneAircraft {
+  hex: string;
+  type?: string;
+  flight?: string;
+  alt_baro?: number;
+  alt_geom?: number;
+  gs?: number;
+  track?: number;
+  baro_rate?: number;
+  squawk?: string;
+  lat?: number;
+  lon?: number;
+  seen?: number;
+  seen_pos?: number;
+}
+
+interface ADSBOneResponse {
+  ac: ADSBOneAircraft[];
+  msg: string;
+  now: number;
+  total: number;
+}
 
 export interface FlightData {
   icao24: string;
@@ -47,7 +105,25 @@ const MIN_AIRBORNE_SPEED = 51.4; // m/s
 
 export async function fetchNearbyFlights(
   observer: Observer,
-  radiusKm: number = 50
+  radiusKm: number = 50,
+  dataSource: ADSBDataSource = ADSBDataSource.OPENSKY
+): Promise<FlightData[]> {
+  const sourceInfo = DATA_SOURCES[dataSource];
+  const clampedRadius = Math.min(radiusKm, sourceInfo.maxRadius);
+  
+  switch (dataSource) {
+    case ADSBDataSource.OPENSKY:
+      return fetchOpenSkyFlights(observer, clampedRadius);
+    case ADSBDataSource.ADSB_ONE:
+      return fetchADSBOneFlights(observer, clampedRadius);
+    default:
+      throw new Error(`Unsupported data source: ${dataSource}`);
+  }
+}
+
+async function fetchOpenSkyFlights(
+  observer: Observer,
+  radiusKm: number
 ): Promise<FlightData[]> {
   const latMin = observer.latitude - (radiusKm / 111.32);
   const latMax = observer.latitude + (radiusKm / 111.32);
@@ -90,7 +166,56 @@ export async function fetchNearbyFlights(
 
     return flights;
   } catch (error) {
-    console.error('Error fetching flight data:', error);
+    console.error('Error fetching OpenSky flight data:', error);
+    throw error;
+  }
+}
+
+async function fetchADSBOneFlights(
+  observer: Observer,
+  radiusKm: number
+): Promise<FlightData[]> {
+  // Convert km to nautical miles for ADSB.One API
+  const radiusNm = Math.min(radiusKm * 0.539957, 250); // Max 250 nm
+  
+  try {
+    const url = `https://api.adsb.one/v2/point/${observer.latitude}/${observer.longitude}/${radiusNm}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. ADSB.One allows 1 request per second.');
+      }
+      throw new Error(`Failed to fetch flight data: ${response.status}`);
+    }
+
+    const data: ADSBOneResponse = await response.json();
+
+    if (!data.ac || !Array.isArray(data.ac)) {
+      return [];
+    }
+
+    const flights: FlightData[] = data.ac
+      .filter((aircraft: ADSBOneAircraft) => {
+        return aircraft.lat !== undefined && aircraft.lon !== undefined && 
+               aircraft.alt_baro !== undefined && aircraft.gs !== undefined &&
+               aircraft.gs >= (MIN_AIRBORNE_SPEED * 1.94384); // Convert m/s to knots
+      })
+      .map((aircraft: ADSBOneAircraft) => ({
+        icao24: aircraft.hex.toLowerCase(),
+        callsign: aircraft.flight ? aircraft.flight.trim() : null,
+        latitude: aircraft.lat!,
+        longitude: aircraft.lon!,
+        altitude: aircraft.alt_baro! * 0.3048, // Convert feet to meters
+        velocity: (aircraft.gs! * 0.514444), // Convert knots to m/s
+        heading: aircraft.track || 0,
+        verticalRate: aircraft.baro_rate ? aircraft.baro_rate * 0.00508 : 0, // Convert ft/min to m/s
+        lastUpdate: (data.now - (aircraft.seen || 0) * 1000) / 1000
+      }));
+
+    return flights;
+  } catch (error) {
+    console.error('Error fetching ADSB.One flight data:', error);
     throw error;
   }
 }

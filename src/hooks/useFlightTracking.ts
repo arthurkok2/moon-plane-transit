@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Observer } from '../lib/astronomy';
-import { FlightData, FlightPosition, fetchNearbyFlights, calculateFlightPosition } from '../lib/flights';
+import { FlightData, FlightPosition, fetchNearbyFlights, calculateFlightPosition, ADSBDataSource, DATA_SOURCES } from '../lib/flights';
 
-const UPDATE_INTERVAL = 60000;
-
-export function useFlightTracking(observer: Observer | null, radiusKm: number = 50) {
+export function useFlightTracking(observer: Observer | null, radiusKm: number = 50, dataSource: ADSBDataSource) {
   const [flights, setFlights] = useState<FlightData[]>([]);
   const [flightPositions, setFlightPositions] = useState<FlightPosition[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +44,7 @@ export function useFlightTracking(observer: Observer | null, radiusKm: number = 
       setError(null);
 
       try {
-        const fetchedFlights = await fetchNearbyFlights(observer, radiusKm);
+        const fetchedFlights = await fetchNearbyFlights(observer, radiusKm, dataSource);
         setFlights(fetchedFlights);
 
         const positions = fetchedFlights.map(flight =>
@@ -62,11 +60,14 @@ export function useFlightTracking(observer: Observer | null, radiusKm: number = 
       }
     };
 
+    // Get update interval for current data source
+    const updateInterval = DATA_SOURCES[dataSource].updateInterval;
+    
     // Fetch immediately for new observer
     fetchFlights();
     
     // Set up interval for regular updates
-    intervalRef.current = setInterval(fetchFlights, UPDATE_INTERVAL);
+    intervalRef.current = setInterval(fetchFlights, updateInterval);
 
     return () => {
       if (intervalRef.current) {
@@ -74,7 +75,7 @@ export function useFlightTracking(observer: Observer | null, radiusKm: number = 
         intervalRef.current = null;
       }
     };
-  }, [observer, radiusKm]);
+  }, [observer, radiusKm, dataSource]);
 
   return { flights, flightPositions, error, loading, lastUpdate };
 }
