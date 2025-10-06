@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Satellite, AlertCircle, Loader2 } from 'lucide-react';
 import { MoonInfo } from './components/MoonInfo';
+import { SunInfo } from './components/SunInfo';
 import { SkyMap } from './components/SkyMap';
 import { HorizonView } from './components/HorizonView';
 import { TransitList } from './components/TransitList';
@@ -9,6 +10,7 @@ import { CameraAssistant } from './components/CameraAssistant';
 import { DataSourceSelector } from './components/DataSourceSelector';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useMoonTracking } from './hooks/useMoonTracking';
+import { useSunTracking } from './hooks/useSunTracking';
 import { useFlightTracking } from './hooks/useFlightTracking';
 import { useDataSource } from './hooks/useDataSource';
 import { TransitDetector, TransitPrediction } from './lib/transitDetector';
@@ -17,6 +19,11 @@ import { DATA_SOURCES } from './lib/flights';
 function App() {
   const { observer, error: locationError, loading: locationLoading } = useGeolocation();
   const moonPosition = useMoonTracking(observer);
+  const sunPosition = useSunTracking(observer);
+  const [bodyMode, setBodyMode] = useState<'moon' | 'sun'>(() => {
+    try { return (localStorage.getItem('transitBodyMode') as 'moon'|'sun') || 'moon'; } catch { return 'moon'; }
+  });
+  useEffect(() => { try { localStorage.setItem('transitBodyMode', bodyMode); } catch { /* ignore persistence errors */ } }, [bodyMode]);
   const { dataSource, setDataSource } = useDataSource();
   const { flights, flightPositions, error: flightError, loading: flightLoading, lastUpdate } = useFlightTracking(observer, 50, dataSource);
 
@@ -25,18 +32,21 @@ function App() {
   const [detector] = useState(() => new TransitDetector());
 
   useEffect(() => {
-    if (!observer || !moonPosition || flights.length === 0) {
-      setTransits([]);
-      return;
+    if (!observer || flights.length === 0) { setTransits([]); return; }
+    if (bodyMode === 'moon') {
+      if (moonPosition) setTransits(detector.detectMoonTransits(observer, flights, moonPosition));
+      else setTransits([]);
+    } else {
+      if (sunPosition) setTransits(detector.detectSunTransits(observer, flights, sunPosition));
+      else setTransits([]);
     }
+  }, [observer, flights, bodyMode, moonPosition, sunPosition, detector]);
 
-    const detectedTransits = detector.detectTransits(observer, flights, moonPosition);
-    setTransits(detectedTransits);
-
-    if (detectedTransits.length > 0 && !selectedTransit) {
-      setSelectedTransit(detectedTransits[0]);
+  useEffect(() => {
+    if (!selectedTransit || selectedTransit.bodyName.toLowerCase() !== bodyMode) {
+      setSelectedTransit(transits[0] || null);
     }
-  }, [observer, moonPosition, flights, detector, selectedTransit]);
+  }, [bodyMode, transits, selectedTransit]);
 
   if (locationLoading) {
     return (
@@ -65,7 +75,7 @@ function App() {
     );
   }
 
-  if (!observer || !moonPosition) {
+  if (!observer) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
@@ -88,6 +98,23 @@ function App() {
           </p>
         </header>
 
+        {/* Transit Body Selector Row (moved to top) */}
+        <div className="mb-6 flex flex-wrap gap-3 items-center">
+          <div className="text-sm text-slate-400">Transit Body:</div>
+          <div className="flex gap-2">
+            {(['moon','sun'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setBodyMode(mode)}
+                aria-pressed={bodyMode === mode}
+                className={`px-3 py-1 rounded text-sm border transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 focus:ring-offset-slate-900 ${bodyMode===mode? 'bg-blue-600 border-blue-500 text-white':'border-slate-600 text-slate-300 hover:border-slate-400'}`}
+              >
+                {mode.charAt(0).toUpperCase()+mode.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Data Source Selector Row */}
         <div className="mb-6">
           <DataSourceSelector 
             selectedSource={dataSource}
@@ -132,22 +159,26 @@ function App() {
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle className="w-5 h-5 text-yellow-400" />
-              <h3 className="text-white font-semibold">Moon Visibility</h3>
+              <h3 className="text-white font-semibold">{bodyMode === 'moon' ? 'Moon' : 'Sun'} Visibility</h3>
             </div>
             <div className="text-slate-300 text-sm">
-              {moonPosition.altitude > 0 ? (
-                <>
-                  <div className="text-green-400 font-medium">Moon is visible</div>
-                  <div>{moonPosition.phase}</div>
-                </>
+              {bodyMode === 'moon' ? (
+                moonPosition && moonPosition.altitude > 0 ? (
+                  <>
+                    <div className="text-green-400 font-medium">Moon is visible</div>
+                    <div>{moonPosition.phase}</div>
+                  </>
+                ) : <div className="text-orange-400 font-medium">Moon below horizon</div>
               ) : (
-                <div className="text-orange-400 font-medium">Moon below horizon</div>
+                sunPosition && sunPosition.altitude > 0 ? (
+                  <div className="text-amber-300 font-medium">Sun is above horizon</div>
+                ) : <div className="text-orange-400 font-medium">Sun below horizon</div>
               )}
             </div>
           </div>
         </div>
 
-        {moonPosition.altitude <= 0 && (
+        {bodyMode==='moon' && moonPosition && moonPosition.altitude <= 0 && (
           <div className="bg-orange-900/30 border border-orange-700/50 rounded-xl p-4 mb-6">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" />
@@ -160,17 +191,39 @@ function App() {
             </div>
           </div>
         )}
+        {bodyMode==='sun' && sunPosition && sunPosition.altitude <= 0 && (
+          <div className="bg-orange-900/30 border border-orange-700/50 rounded-xl p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-white font-semibold mb-1">Sun Not Visible</h3>
+                <p className="text-orange-200 text-sm">
+                  The sun is currently below the horizon at your location.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <MoonInfo moonPosition={moonPosition} observer={observer} />
-            <SkyMap moonPosition={moonPosition} flights={flightPositions} />            
+            {bodyMode==='moon' && moonPosition && <MoonInfo moonPosition={moonPosition} observer={observer} />}
+            {bodyMode==='sun' && sunPosition && <SunInfo sunPosition={sunPosition} observer={observer} />}
+            {(bodyMode==='moon' && moonPosition) && <SkyMap bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
+            {(bodyMode==='sun' && sunPosition) && <SkyMap bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}            
             
           </div>
 
           <div className="space-y-6">
-            <HorizonView moonPosition={moonPosition} flights={flightPositions} />
-            <TransitList transits={transits} onSelectTransit={setSelectedTransit} />
+            {(bodyMode==='moon' && moonPosition) && <HorizonView bodyPosition={moonPosition} bodyName='Moon' flights={flightPositions} />}
+            {(bodyMode==='sun' && sunPosition) && <HorizonView bodyPosition={sunPosition} bodyName='Sun' flights={flightPositions} />}
+            <TransitList 
+              transits={transits} 
+              onSelectTransit={setSelectedTransit} 
+              title='Transit Predictions'
+              showSafetyNote={bodyMode==='sun'}
+              bodyName={bodyMode==='moon' ? 'Moon' : 'Sun'}
+            />
             {selectedTransit && (
               <CameraAssistant transit={selectedTransit} />
             )}
@@ -191,12 +244,12 @@ function App() {
 
         <footer className="mt-12 pt-8 border-t border-slate-700 text-center text-slate-400 text-sm">
           <p>
-            Flight data currently provided by <span className="text-slate-300 font-medium">{DATA_SOURCES[dataSource].name}</span>.
-            Astronomical calculations powered by <span className="text-slate-300 font-medium">Astronomy Engine</span>.
+            Flight data: <span className="text-slate-300 font-medium">{DATA_SOURCES[dataSource].name}</span>. Celestial calculations: <span className="text-slate-300 font-medium">Astronomy Engine</span>.
           </p>
           <p className="mt-2">
             Available data sources: <span className="text-slate-300">ADSB.One</span> • <span className="text-slate-300">OpenSky Network</span>
           </p>
+          <p className="mt-2 text-xs text-orange-300">Safety: Use certified solar filters when attempting Sun transit photography.</p>
           <p className="mt-2">For best results, use a telephoto lens and start shooting before the predicted transit time.</p>
         </footer>
       </div>

@@ -125,8 +125,9 @@ describe('TransitDetector', () => {
       expect(result[0]).toMatchObject({
         flight: mockFlight,
         angularSeparation: 0.3,
-        moonAltitude: 45.0,
-        moonAzimuth: 180.0
+        bodyName: 'Moon',
+        bodyAltitude: 45.0,
+        bodyAzimuth: 180.0
       });
     });
 

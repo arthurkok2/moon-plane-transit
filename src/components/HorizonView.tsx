@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { MoonPosition } from '../lib/astronomy';
+import { MoonPosition, SunPosition } from '../lib/astronomy';
 import { FlightPosition } from '../lib/flights';
 
 interface HorizonViewProps {
-  moonPosition: MoonPosition;
+  bodyPosition: MoonPosition | SunPosition;
+  bodyName: 'Moon' | 'Sun';
   flights: FlightPosition[];
 }
 
-export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
+export function HorizonView({ bodyPosition, bodyName, flights }: HorizonViewProps) {
   const horizonCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Horizon view effect
@@ -50,7 +51,7 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
     ctx.setLineDash([2, 2]);
     
     // Calculate the maximum altitude to show (next 15° increment above moon's altitude)
-    const moonAlt = moonPosition.altitude > 0 ? moonPosition.altitude : 0;
+  const moonAlt = bodyPosition.altitude > 0 ? bodyPosition.altitude : 0;
     const maxAltitude = Math.ceil(moonAlt / 15) * 15 + 15; // Next 15° increment + one more
     const clampedMaxAltitude = Math.min(maxAltitude, 75); // Don't exceed 75°
     
@@ -74,7 +75,7 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
     ctx.setLineDash([]);
 
     // Calculate moon-centered view
-    const moonAzimuth = moonPosition.azimuth;
+  const moonAzimuth = bodyPosition.azimuth;
     const viewRange = 120; // degrees of azimuth to show
 
     // Draw compass along the bottom
@@ -165,40 +166,52 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
     ctx.fill();
 
     // Draw moon if above horizon
-    if (moonPosition.altitude > 0) {
-      const moonX = width / 2; // Moon is always centered horizontally
-      const moonY = horizonY - (moonPosition.altitude / altitudeScale) * horizonY;
+    if (bodyPosition.altitude > 0) {
+      const bodyX = width / 2; // Body is centered
+      const bodyY = horizonY - (bodyPosition.altitude / altitudeScale) * horizonY;
 
-      // Moon glow
-      const glowGradient = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 20);
-      glowGradient.addColorStop(0, 'rgba(248, 250, 252, 0.8)');
-      glowGradient.addColorStop(0.5, 'rgba(226, 232, 240, 0.4)');
-      glowGradient.addColorStop(1, 'rgba(203, 213, 225, 0.0)');
+      // Glow
+      const glowGradient = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, 20);
+      if (bodyName === 'Moon') {
+        glowGradient.addColorStop(0, 'rgba(248, 250, 252, 0.8)');
+        glowGradient.addColorStop(0.5, 'rgba(226, 232, 240, 0.4)');
+        glowGradient.addColorStop(1, 'rgba(203, 213, 225, 0.0)');
+      } else {
+        glowGradient.addColorStop(0, 'rgba(253, 224, 71, 0.9)');
+        glowGradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.5)');
+        glowGradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+      }
       ctx.fillStyle = glowGradient;
       ctx.beginPath();
-      ctx.arc(moonX, moonY, 20, 0, 2 * Math.PI);
+      ctx.arc(bodyX, bodyY, 20, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Moon body
-      const moonGradient = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 10);
-      moonGradient.addColorStop(0, '#f8fafc');
-      moonGradient.addColorStop(0.5, '#e2e8f0');
-      moonGradient.addColorStop(1, '#cbd5e1');
-      ctx.fillStyle = moonGradient;
+      // Body disk
+      const bodyGradient = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, 10);
+      if (bodyName === 'Moon') {
+        bodyGradient.addColorStop(0, '#f8fafc');
+        bodyGradient.addColorStop(0.5, '#e2e8f0');
+        bodyGradient.addColorStop(1, '#cbd5e1');
+      } else {
+        bodyGradient.addColorStop(0, '#fde68a');
+        bodyGradient.addColorStop(0.5, '#fbbf24');
+        bodyGradient.addColorStop(1, '#f59e0b');
+      }
+      ctx.fillStyle = bodyGradient;
       ctx.beginPath();
-      ctx.arc(moonX, moonY, 10, 0, 2 * Math.PI);
+      ctx.arc(bodyX, bodyY, 10, 0, 2 * Math.PI);
       ctx.fill();
 
-      ctx.strokeStyle = '#94a3b8';
+      ctx.strokeStyle = bodyName === 'Moon' ? '#94a3b8' : '#fbbf24';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Moon label
-      ctx.fillStyle = '#f8fafc';
+      // Label
+      ctx.fillStyle = bodyName === 'Moon' ? '#f8fafc' : '#fffbeb';
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('MOON', moonX, moonY - 25);
-      ctx.fillText(`${moonPosition.altitude.toFixed(1)}°`, moonX, moonY + 20);
+      ctx.fillText(bodyName.toUpperCase(), bodyX, bodyY - 25);
+      ctx.fillText(`${bodyPosition.altitude.toFixed(1)}°`, bodyX, bodyY + 20);
     }
 
     // Draw aircraft
@@ -318,7 +331,7 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
     ctx.fillText(`Facing: ${moonAzimuth.toFixed(0)}° (${getCompassDirection(moonAzimuth)})`, width - 5, 15);
     ctx.fillText(`View: ${viewRange}° azimuth range`, width - 5, 28);
 
-  }, [moonPosition, flights]);
+  }, [bodyPosition, flights, bodyName]);
 
   // Helper function to get compass direction
   const getCompassDirection = (azimuth: number): string => {
@@ -342,7 +355,7 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
         <div className="flex items-center justify-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-            <span>Moon</span>
+            <span>{bodyName}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -351,9 +364,9 @@ export function HorizonView({ moonPosition, flights }: HorizonViewProps) {
         </div>
         
         <div className="text-center">
-          <p>Side view facing the moon's direction • Grid lines show altitude every 15°</p>
-          {moonPosition.altitude <= 0 && (
-            <p className="text-amber-400 mt-1">Moon is below horizon</p>
+          <p>Side view facing the {bodyName.toLowerCase()}'s direction • Grid lines show altitude every 15°</p>
+          {bodyPosition.altitude <= 0 && (
+            <p className="text-amber-400 mt-1">{bodyName} is below horizon</p>
           )}
         </div>
       </div>

@@ -17,6 +17,24 @@ export interface MoonPosition {
   phase: string;
 }
 
+export interface SunPosition {
+  altitude: number;
+  azimuth: number;
+  distance: number; // km
+  angularDiameter: number; // degrees
+  rightAscension: number;
+  declination: number;
+}
+
+export interface CelestialBodyPositionBase {
+  altitude: number;
+  azimuth: number;
+  angularDiameter: number;
+  name: 'Moon' | 'Sun';
+}
+
+export type CelestialBodyPosition = (CelestialBodyPositionBase & { name: 'Moon'; moon: MoonPosition }) | (CelestialBodyPositionBase & { name: 'Sun'; sun: SunPosition });
+
 export interface HorizontalCoordinates {
   altitude: number;
   azimuth: number;
@@ -54,6 +72,28 @@ export function calculateMoonPosition(observer: Observer, date: Date = new Date(
     declination: moonEquatorial.dec,
     illumination: illumination.phase_fraction,
     phase
+  };
+}
+
+export function calculateSunPosition(observer: Observer, date: Date = new Date()): SunPosition {
+  const observerObj = new Astronomy.Observer(observer.latitude, observer.longitude, observer.elevation);
+  const sunEquatorial = Astronomy.Equator(Astronomy.Body.Sun, date, observerObj, true, true);
+  const sunHorizontal = Astronomy.Horizon(date, observerObj, sunEquatorial.ra, sunEquatorial.dec, 'normal');
+
+  // Distance Earth-Sun in AU
+  const sunGeo = Astronomy.GeoVector(Astronomy.Body.Sun, date, true);
+  const distanceAU = Math.sqrt(sunGeo.x * sunGeo.x + sunGeo.y * sunGeo.y + sunGeo.z * sunGeo.z);
+  const distanceKm = distanceAU * 149597870.7;
+  // Sun radius 695700 km
+  const sunAngularDiameter = (2 * Math.atan(695700 / distanceKm)) * (180 / Math.PI);
+
+  return {
+    altitude: sunHorizontal.altitude,
+    azimuth: sunHorizontal.azimuth,
+    distance: distanceKm,
+    angularDiameter: sunAngularDiameter,
+    rightAscension: sunEquatorial.ra,
+    declination: sunEquatorial.dec
   };
 }
 
@@ -140,6 +180,36 @@ export function getMoonRiseSetTimes(observer: Observer, date: Date = new Date())
       moonset: null,
       alwaysUp: currentMoonPos.altitude > 0,
       alwaysDown: currentMoonPos.altitude <= 0
+    };
+  }
+}
+
+export function getSunRiseSetTimes(observer: Observer, date: Date = new Date()): {
+  sunrise: Date | null;
+  sunset: Date | null;
+  alwaysUp: boolean;
+  alwaysDown: boolean;
+} {
+  const observerObj = new Astronomy.Observer(observer.latitude, observer.longitude, observer.elevation);
+  try {
+    const searchDate = new Date(date);
+    searchDate.setHours(0,0,0,0);
+    const sunrise = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observerObj, 1, searchDate, 1);
+    const sunset = Astronomy.SearchRiseSet(Astronomy.Body.Sun, observerObj, -1, searchDate, 1);
+    return {
+      sunrise: sunrise ? sunrise.date : null,
+      sunset: sunset ? sunset.date : null,
+      alwaysUp: false,
+      alwaysDown: false
+    };
+  } catch {
+    // Fallback logic for polar day/night
+    const sunPos = calculateSunPosition(observer, date);
+    return {
+      sunrise: null,
+      sunset: null,
+      alwaysUp: sunPos.altitude > 0,
+      alwaysDown: sunPos.altitude <= 0
     };
   }
 }

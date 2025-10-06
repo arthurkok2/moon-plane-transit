@@ -64,18 +64,18 @@ export function CameraAssistant({ transit }: CameraAssistantProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-slate-400 text-sm mb-1">Azimuth</div>
+              <div className="text-slate-400 text-sm mb-1">Azimuth ({transit.bodyName})</div>
               <div className="text-white text-2xl font-bold">
-                {transit.moonAzimuth.toFixed(1)}°
+                {transit.bodyAzimuth.toFixed(1)}°
               </div>
               <div className="text-slate-500 text-xs mt-1">
-                {getDirectionName(transit.moonAzimuth)}
+                {getDirectionName(transit.bodyAzimuth)}
               </div>
             </div>
             <div>
               <div className="text-slate-400 text-sm mb-1">Altitude</div>
               <div className="text-white text-2xl font-bold">
-                {transit.moonAltitude.toFixed(1)}°
+                {transit.bodyAltitude.toFixed(1)}°
               </div>
               <div className="text-slate-500 text-xs mt-1">
                 above horizon

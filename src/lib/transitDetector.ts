@@ -1,4 +1,4 @@
-import { Observer, MoonPosition, calculateMoonPosition, calculateAngularSeparation } from './astronomy';
+import { Observer, MoonPosition, SunPosition, calculateMoonPosition, calculateSunPosition, calculateAngularSeparation } from './astronomy';
 import { FlightData, FlightPosition, calculateFlightPosition, predictFlightPosition } from './flights';
 
 export interface TransitPrediction {
@@ -6,8 +6,9 @@ export interface TransitPrediction {
   transitTime: Date;
   angularSeparation: number;
   confidenceScore: number;
-  moonAltitude: number;
-  moonAzimuth: number;
+  bodyName: 'Moon' | 'Sun';
+  bodyAltitude: number;
+  bodyAzimuth: number;
   flightAltitude: number;
   flightAzimuth: number;
   timeToTransit: number;
@@ -38,30 +39,33 @@ export class TransitDetector {
     moonPosition: MoonPosition,
     currentTime: Date = new Date()
   ): TransitPrediction[] {
-    const predictions: TransitPrediction[] = [];
+    // Backward compatible Moon-only pathway
+    return this.detectBodyTransits('Moon', observer, flights, moonPosition, currentTime);
+  }
 
+  detectMoonTransits(observer: Observer, flights: FlightData[], moonPosition: MoonPosition, currentTime: Date = new Date()) {
+    return this.detectBodyTransits('Moon', observer, flights, moonPosition, currentTime);
+  }
+
+  detectSunTransits(observer: Observer, flights: FlightData[], sunPosition: SunPosition, currentTime: Date = new Date()) {
+    return this.detectBodyTransits('Sun', observer, flights, sunPosition, currentTime);
+  }
+
+  private detectBodyTransits(
+    body: 'Moon' | 'Sun',
+    observer: Observer,
+    flights: FlightData[],
+    bodyPosition: MoonPosition | SunPosition,
+    currentTime: Date
+  ): TransitPrediction[] {
+    const predictions: TransitPrediction[] = [];
     for (const flight of flights) {
       const flightPosition = calculateFlightPosition(observer, flight);
-
-      if (flightPosition.altitude < 0) {
-        continue;
-      }
-
-      const prediction = this.predictTransit(
-        observer,
-        flight,
-        flightPosition,
-        moonPosition,
-        currentTime
-      );
-
-      if (prediction && prediction.confidenceScore >= this.config.minConfidenceScore) {
-        predictions.push(prediction);
-      }
+      if (flightPosition.altitude < 0) continue;
+      const prediction = this.predictTransit(observer, flight, flightPosition, body, bodyPosition, currentTime);
+      if (prediction && prediction.confidenceScore >= this.config.minConfidenceScore) predictions.push(prediction);
     }
-
     predictions.sort((a, b) => a.timeToTransit - b.timeToTransit);
-
     return predictions;
   }
 
@@ -69,7 +73,8 @@ export class TransitDetector {
     observer: Observer,
     flight: FlightData,
     currentFlightPosition: FlightPosition,
-    moonPosition: MoonPosition,
+    body: 'Moon' | 'Sun',
+    bodyPosition: MoonPosition | SunPosition,
     currentTime: Date
   ): TransitPrediction | null {
     let closestSeparation = Infinity;
@@ -83,9 +88,9 @@ export class TransitDetector {
       const futureTime = new Date(currentTime.getTime() + seconds * 1000);
       const predictedPosition = predictFlightPosition(flight, seconds);
 
-      const futureMoonPosition = calculateMoonPosition(observer, futureTime);
+      const futureBodyPosition = body === 'Moon' ? calculateMoonPosition(observer, futureTime) : calculateSunPosition(observer, futureTime);
 
-      if (futureMoonPosition.altitude < 0) {
+      if (futureBodyPosition.altitude < 0) {
         continue;
       }
 
@@ -101,8 +106,8 @@ export class TransitDetector {
       }
 
       const separation = calculateAngularSeparation(
-        futureMoonPosition.altitude,
-        futureMoonPosition.azimuth,
+        futureBodyPosition.altitude,
+        futureBodyPosition.azimuth,
         futureFlightPosition.altitude,
         futureFlightPosition.azimuth
       );
@@ -122,23 +127,25 @@ export class TransitDetector {
     const confidence = this.calculateConfidence(
       closestSeparation,
       flight,
-      moonPosition,
+      bodyPosition as MoonPosition, // for now use moon-specific logic; Sun confidence uses same heuristics
       currentFlightPosition
     );
 
     const timeToTransit = (closestTime.getTime() - currentTime.getTime()) / 1000;
 
-    return {
+    const prediction: TransitPrediction = {
       flight,
       transitTime: closestTime,
       angularSeparation: closestSeparation,
       confidenceScore: confidence,
-      moonAltitude: moonPosition.altitude,
-      moonAzimuth: moonPosition.azimuth,
+      bodyName: body,
+      bodyAltitude: bodyPosition.altitude,
+      bodyAzimuth: bodyPosition.azimuth,
       flightAltitude: closestFlightAlt,
       flightAzimuth: closestFlightAz,
       timeToTransit
     };
+    return prediction;
   }
 
   private calculatePredictedFlightHorizontal(

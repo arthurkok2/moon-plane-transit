@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoonPosition } from '../lib/astronomy';
+import { MoonPosition, SunPosition } from '../lib/astronomy';
 import { FlightPosition } from '../lib/flights';
 
 interface SkyMapProps {
-  moonPosition: MoonPosition;
+  bodyPosition: MoonPosition | SunPosition; // needs altitude/azimuth
+  bodyName: 'Moon' | 'Sun';
   flights: FlightPosition[];
 }
 
-export function SkyMap({ moonPosition, flights }: SkyMapProps) {
+export function SkyMap({ bodyPosition, bodyName, flights }: SkyMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -68,31 +69,37 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
       ctx.fillText(label, x, y);
     });
 
-    if (moonPosition.altitude > 0) {
-      const altFactor = 1 - (moonPosition.altitude / 90);
-      const moonRadius = altFactor * radius;
-      const moonAngle = (moonPosition.azimuth - 90) * Math.PI / 180;
-      const moonX = centerX + moonRadius * Math.cos(moonAngle);
-      const moonY = centerY + moonRadius * Math.sin(moonAngle);
+    if (bodyPosition.altitude > 0) {
+      const altFactor = 1 - (bodyPosition.altitude / 90);
+      const bodyRadius = altFactor * radius;
+      const bodyAngle = (bodyPosition.azimuth - 90) * Math.PI / 180;
+      const bodyX = centerX + bodyRadius * Math.cos(bodyAngle);
+      const bodyY = centerY + bodyRadius * Math.sin(bodyAngle);
 
-      const gradient = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 12);
-      gradient.addColorStop(0, '#f8fafc');
-      gradient.addColorStop(0.5, '#e2e8f0');
-      gradient.addColorStop(1, '#cbd5e1');
+      const gradient = ctx.createRadialGradient(bodyX, bodyY, 0, bodyX, bodyY, 12);
+      if (bodyName === 'Moon') {
+        gradient.addColorStop(0, '#f8fafc');
+        gradient.addColorStop(0.5, '#e2e8f0');
+        gradient.addColorStop(1, '#cbd5e1');
+      } else {
+        gradient.addColorStop(0, '#fde68a');
+        gradient.addColorStop(0.5, '#fbbf24');
+        gradient.addColorStop(1, '#f59e0b');
+      }
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(moonX, moonY, 12, 0, 2 * Math.PI);
+      ctx.arc(bodyX, bodyY, 12, 0, 2 * Math.PI);
       ctx.fill();
 
-      ctx.strokeStyle = '#94a3b8';
+      ctx.strokeStyle = bodyName === 'Moon' ? '#94a3b8' : '#fbbf24';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = '#f8fafc';
+      ctx.fillStyle = bodyName === 'Moon' ? '#f8fafc' : '#fffbeb';
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('MOON', moonX, moonY - 18);
+      ctx.fillText(bodyName.toUpperCase(), bodyX, bodyY - 18);
     }
 
     flights.forEach(flightPos => {
@@ -164,12 +171,12 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
     ctx.textAlign = 'left';
     ctx.fillText('Center = Zenith (90°)', 10, height - 10);
 
-  }, [moonPosition, flights]);
+  }, [bodyPosition, flights, bodyName]);
 
   return (
     <div className="bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-white text-lg font-semibold">Sky Map</h3>
+  <h3 className="text-white text-lg font-semibold">Sky Map</h3>
         <button
           onClick={() => setShowHelp(!showHelp)}
           className="text-slate-400 hover:text-slate-200 text-sm px-2 py-1 rounded border border-slate-600 hover:border-slate-500 transition-colors"
@@ -203,7 +210,7 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
             <div>
               <strong className="text-slate-200">Objects:</strong>
               <ul className="ml-4 mt-1 space-y-1 text-xs">
-                <li>• <span className="text-yellow-400">Yellow circle</span>: Moon position</li>
+                <li>• <span className="text-yellow-400">Yellow/Orange circle</span>: {bodyName} position</li>
                 <li>• <span className="text-blue-400">Blue dots</span>: Aircraft positions</li>
               </ul>
             </div>
@@ -225,7 +232,7 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
       <div className="mt-3 flex items-center justify-center gap-4 text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-          <span>Moon</span>
+          <span>{bodyName}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-blue-500"></div>
