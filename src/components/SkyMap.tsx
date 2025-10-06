@@ -115,23 +115,33 @@ export function SkyMap({ moonPosition, flights }: SkyMapProps) {
         // Draw direction arrow
         if (flightPos.flight.heading !== null && flightPos.flight.heading !== undefined) {
           const headingAngle = (flightPos.flight.heading - 90) * Math.PI / 180;
-          const arrowLength = 13;
+          const arrowLength = 10;
           const arrowWidth = 6;
+          
+          // Vertical movement component (verticalRate in m/s, positive = climbing)
+          const verticalRate = flightPos.flight.verticalRate || 0;
+          const significantVerticalMovement = Math.abs(verticalRate) > 2; // 2 m/s threshold
           
           // Arrow tip
           const arrowTipX = flightX + arrowLength * Math.cos(headingAngle);
           const arrowTipY = flightY + arrowLength * Math.sin(headingAngle);
           
-          // Arrow base corners
-          const baseAngle1 = headingAngle + Math.PI - 0.5;
-          const baseAngle2 = headingAngle + Math.PI + 0.5;
-          const baseX1 = flightX + arrowWidth * Math.cos(baseAngle1);
-          const baseY1 = flightY + arrowWidth * Math.sin(baseAngle1);
-          const baseX2 = flightX + arrowWidth * Math.cos(baseAngle2);
-          const baseY2 = flightY + arrowWidth * Math.sin(baseAngle2);
+          // Calculate perpendicular vector for arrow base
+          const perpAngle1 = headingAngle + Math.PI * 0.75;
+          const perpAngle2 = headingAngle - Math.PI * 0.75;
           
-          // Fill with green color
-          ctx.fillStyle = '#22c55e'; // Green color
+          const baseX1 = arrowTipX + arrowWidth * Math.cos(perpAngle1);
+          const baseY1 = arrowTipY + arrowWidth * Math.sin(perpAngle1);
+          const baseX2 = arrowTipX + arrowWidth * Math.cos(perpAngle2);
+          const baseY2 = arrowTipY + arrowWidth * Math.sin(perpAngle2);
+          
+          // Color based on vertical movement (same as HorizonView)
+          if (significantVerticalMovement) {
+            ctx.fillStyle = verticalRate > 0 ? '#10b981' : '#ef4444'; // Green for climb, red for descent
+          } else {
+            ctx.fillStyle = '#22c55e'; // Default green for horizontal only
+          }
+          
           ctx.beginPath();
           ctx.moveTo(arrowTipX, arrowTipY);
           ctx.lineTo(baseX1, baseY1);
