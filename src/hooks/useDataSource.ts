@@ -14,7 +14,7 @@ export function useDataSource() {
     } catch (error) {
       console.warn('Failed to load data source from localStorage:', error);
     }
-    return ADSBDataSource.OPENSKY; // Default to OpenSky
+    return ADSBDataSource.ADSB_ONE; // Default to ADSB.One
   });
 
   useEffect(() => {

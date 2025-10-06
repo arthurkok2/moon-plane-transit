@@ -16,6 +16,14 @@ export interface DataSourceInfo {
 }
 
 export const DATA_SOURCES: Record<ADSBDataSource, DataSourceInfo> = {
+  [ADSBDataSource.ADSB_ONE]: {
+    id: ADSBDataSource.ADSB_ONE,
+    name: 'ADSB.One',
+    description: 'High-quality ADS-B data with excellent coverage',
+    rateLimit: '1 request/second',
+    maxRadius: 463, // 250 nautical miles
+    updateInterval: 10000 // 10 seconds
+  },
   [ADSBDataSource.OPENSKY]: {
     id: ADSBDataSource.OPENSKY,
     name: 'OpenSky Network',
@@ -23,14 +31,6 @@ export const DATA_SOURCES: Record<ADSBDataSource, DataSourceInfo> = {
     rateLimit: '400 requests/day (anonymous)',
     maxRadius: 250,
     updateInterval: 60000 // 60 seconds
-  },
-  [ADSBDataSource.ADSB_ONE]: {
-    id: ADSBDataSource.ADSB_ONE,
-    name: 'ADSB.One',
-    description: 'High-quality ADS-B data with good coverage',
-    rateLimit: '1 request/second',
-    maxRadius: 463, // 250 nautical miles
-    updateInterval: 10000 // 10 seconds
   }
 };
 

@@ -7,7 +7,11 @@ interface DataSourceSelectorProps {
 }
 
 export function DataSourceSelector({ selectedSource, onSourceChange }: DataSourceSelectorProps) {
-  const sources = Object.values(DATA_SOURCES);
+  // Ensure ADSB.One appears first
+  const sources = [
+    DATA_SOURCES[ADSBDataSource.ADSB_ONE],
+    DATA_SOURCES[ADSBDataSource.OPENSKY]
+  ];
 
   return (
     <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
